@@ -331,8 +331,30 @@
                 this.updateDisplay();
             }
 
-            loadData() {
-                this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+            async loadData() {
+                try {
+                    // Load from GitHub Repository
+                    const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `token ${GITHUB_CONFIG.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+            
+                    if (response.ok) {
+                        const fileData = await response.json();
+                        this.entries = JSON.parse(atob(fileData.content));
+                    } else {
+                        // Fallback to localStorage
+                        this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                    }
+                } catch (error) {
+                    console.error('Failed to load from GitHub:', error);
+                    // Fallback to localStorage
+                    this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                }
+                
                 this.calculateStats();
             }
 
