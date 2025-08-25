@@ -116,13 +116,15 @@ class PresenceSystem {
 
         // Feedback screen
         const feedbackInput = document.getElementById('feedback-input');
-        const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+        const form = document.getElementById('attendance-form');
         
         feedbackInput.addEventListener('input', () => {
             this.handleFeedbackInput();
         });
         
-        submitFeedbackBtn.addEventListener('click', () => {
+        // Handle form submission properly
+        form.addEventListener('submit', (e) => {
+            e.preventDefault(); // Prevent default form submission
             this.submitFeedback();
         });
 
@@ -391,56 +393,66 @@ class PresenceSystem {
     }
 
     submitFeedback() {
-        const feedbackInput = document.getElementById('feedback-input');
-        this.sessionData.feedback = feedbackInput.value.trim();
-        
-        // Save entry to localStorage
-        this.saveEntry();
-        
-        // Update thank you screen
-        this.updateThankYouScreen();
-        
-        this.showScreen('thank-you-screen');
+    const feedbackInput = document.getElementById('feedback-input');
+    this.sessionData.feedback = feedbackInput.value.trim();
+    
+    // Populate hidden fields for Netlify
+    document.getElementById('hidden-student-id').value = this.sessionData.studentId;
+    document.getElementById('hidden-student-name').value = this.sessionData.studentName;
+    document.getElementById('hidden-student-schedule').value = this.sessionData.studentSchedule;
+    document.getElementById('hidden-timestamp').value = this.sessionData.timestamp;
+    document.getElementById('hidden-device-info').value = JSON.stringify(this.sessionData.deviceInfo);
+    
+    // Save entry to localStorage and Netlify
+    this.saveEntry();
+    
+    // Update thank you screen
+    this.updateThankYouScreen();
+    
+    // Show thank you screen
+    this.showScreen('thank-you-screen');
     }
 
-    async saveEntry() {
-        const entry = {
-            id: this.generateEntryId(),
-            studentId: this.sessionData.studentId,
-            studentName: this.sessionData.studentName,
-            studentSchedule: this.sessionData.studentSchedule,
-            feedback: this.sessionData.feedback,
-            timestamp: this.sessionData.timestamp,
-            deviceInfo: this.sessionData.deviceInfo
-        };
-    
-        // Save to localStorage as backup
-        const localEntries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
-        localEntries.push(entry);
-        localStorage.setItem('btf5965_entries', JSON.stringify(localEntries));
-    
-        // Submit to Netlify Forms
-        try {
-            const formData = new FormData();
-            formData.append('form-name', 'attendance');
-            formData.append('studentId', entry.studentId);
-            formData.append('studentName', entry.studentName);
-            formData.append('studentSchedule', entry.studentSchedule);
-            formData.append('feedback', entry.feedback);
-            formData.append('timestamp', entry.timestamp);
-            formData.append('deviceInfo', JSON.stringify(entry.deviceInfo));
-    
-            await fetch('/', {
-                method: 'POST',
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams(formData).toString()
-            });
-    
-            console.log('Entry saved to Netlify:', entry);
-        } catch (error) {
-            console.error('Failed to save to Netlify:', error);
-            alert('Entry saved locally. Online sync may have failed.');
-        }
+async saveEntry() {
+    const entry = {
+        id: this.generateEntryId(),
+        studentId: this.sessionData.studentId,
+        studentName: this.sessionData.studentName,
+        studentSchedule: this.sessionData.studentSchedule,
+        feedback: this.sessionData.feedback,
+        timestamp: this.sessionData.timestamp,
+        deviceInfo: this.sessionData.deviceInfo
+    };
+
+    // Save to localStorage as backup
+    const localEntries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+    localEntries.push(entry);
+    localStorage.setItem('btf5965_entries', JSON.stringify(localEntries));
+
+    // Submit to Netlify Forms in the background
+    try {
+        const formData = new FormData();
+        formData.append('form-name', 'attendance');
+        formData.append('studentId', entry.studentId);
+        formData.append('studentName', entry.studentName);
+        formData.append('studentSchedule', entry.studentSchedule);
+        formData.append('feedback', entry.feedback);
+        formData.append('timestamp', entry.timestamp);
+        formData.append('deviceInfo', JSON.stringify(entry.deviceInfo));
+
+        // Fire and forget - don't wait for response
+        fetch('/', {
+            method: 'POST',
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(formData).toString()
+        }).catch(error => {
+            console.log('Background submission to Netlify:', error);
+        });
+
+        console.log('Entry saved locally:', entry);
+    } catch (error) {
+        console.error('Failed to prepare Netlify submission:', error);
+    }
     }
 
     generateEntryId() {
