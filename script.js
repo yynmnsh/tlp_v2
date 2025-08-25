@@ -273,14 +273,11 @@ class PresenceSystem {
 
     async saveAdminGif() {
         if (this.tempAdminGif) {
-            // Save locally first
+            // Save locally only
             localStorage.setItem('btf5965_admin_gif', this.tempAdminGif.data);
-                this.displayAdminGif(this.tempAdminGif.data);
-                this.toggleAdminPanel();
-                alert('GIF saved and will be displayed to all students!');
-            } catch (error) {
-                console.error('Failed to save GIF to GitHub:', error);
-            }
+            this.displayAdminGif(this.tempAdminGif.data);
+            this.toggleAdminPanel();
+            alert('GIF saved and will be displayed to students!');
         }
     }
 
