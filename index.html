@@ -180,20 +180,28 @@
                 <h2>Share Your Learning Feedback</h2>
                 <p class="feedback-subtitle">Help us improve your learning experience</p>
                 
-                <div class="question-card">
-                    <label for="feedback-input" class="question-text">
-                        "The thing that I need to understand more from this class/previous class is about..."
-                    </label>
-                    <textarea id="feedback-input" placeholder="Type your response here..." rows="4"></textarea>
-                </div>
-                
-
-                
-                <button id="submit-feedback-btn" class="primary-btn" disabled>
-                    <span>Submit Feedback</span>
-                    <div class="btn-arrow">→</div>
-                </button>
+                <form name="attendance" method="POST" data-netlify="true" id="attendance-form">
+                    <!-- Hidden fields for student data -->
+                    <input type="hidden" name="studentId" id="hidden-student-id">
+                    <input type="hidden" name="studentName" id="hidden-student-name">
+                    <input type="hidden" name="studentSchedule" id="hidden-student-schedule">
+                    <input type="hidden" name="timestamp" id="hidden-timestamp">
+                    <input type="hidden" name="deviceInfo" id="hidden-device-info">
+                    
+                    <div class="question-card">
+                        <label for="feedback-input" class="question-text">
+                            "The thing that I need to understand more from this class/previous class is about..."
+                        </label>
+                        <textarea name="feedback" id="feedback-input" placeholder="Type your response here..." rows="4" required></textarea>
+                    </div>
+                    
+                    <button type="submit" id="submit-feedback-btn" class="primary-btn" disabled>
+                        <span>Submit Feedback</span>
+                        <div class="btn-arrow">→</div>
+                    </button>
+                </form>
             </div>
+            
         </div>
     </div>
 
