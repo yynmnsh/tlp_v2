@@ -1,6 +1,14 @@
 // BTF5965 Tax Law Tutorial Presence System
 // Main JavaScript functionality
 
+// GitHub Repository Configuration
+const GITHUB_CONFIG = {
+    owner: 'yynmnsh',
+    repo: 'tlp_v2',
+    token: TOKEN_SECRET
+    branch: 'main'
+};
+
 class PresenceSystem {
     constructor() {
         this.currentScreen = 'loading-screen';
@@ -129,10 +137,7 @@ class PresenceSystem {
         // GIF upload
         this.setupAdminGifUpload();
 
-        // Thank you screen
-        document.getElementById('new-entry-btn').addEventListener('click', () => {
-            this.resetSystem();
-        });
+        // Thank you screen : deleted        document.getElementById('new-entry-btn').addEventListener('click', () => { this.resetSystem();        });
 
         // Error modal
         document.getElementById('close-error-modal').addEventListener('click', () => {
@@ -274,12 +279,54 @@ class PresenceSystem {
         this.tempAdminGif = null;
     }
 
-    saveAdminGif() {
+    async saveAdminGif() {
         if (this.tempAdminGif) {
+            // Save locally first
             localStorage.setItem('btf5965_admin_gif', this.tempAdminGif.data);
-            this.displayAdminGif(this.tempAdminGif.data);
-            this.toggleAdminPanel(); // Hide admin panel after saving
-            alert('GIF saved and will be displayed to students!');
+            
+            // Save to GitHub
+            try {
+                const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/admin_gif.json`;
+                
+                // Get current file SHA if exists
+                let sha = '';
+                try {
+                    const getResponse = await fetch(url, {
+                        headers: {
+                            'Authorization': `token ${GITHUB_CONFIG.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    if (getResponse.ok) {
+                        const fileData = await getResponse.json();
+                        sha = fileData.sha;
+                    }
+                } catch (e) {}
+    
+                // Update file
+                await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONFIG.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Update admin GIF',
+                        content: btoa(JSON.stringify({
+                            gif: this.tempAdminGif.data,
+                            updated: new Date().toISOString()
+                        })),
+                        sha: sha || undefined,
+                        branch: GITHUB_CONFIG.branch
+                    })
+                });
+                
+                this.displayAdminGif(this.tempAdminGif.data);
+                this.toggleAdminPanel();
+                alert('GIF saved and will be displayed to all students!');
+            } catch (error) {
+                console.error('Failed to save GIF to GitHub:', error);
+            }
         }
     }
 
@@ -405,7 +452,7 @@ class PresenceSystem {
         this.showScreen('thank-you-screen');
     }
 
-    saveEntry() {
+    async saveEntry() {
         const entry = {
             id: this.generateEntryId(),
             studentId: this.sessionData.studentId,
@@ -415,13 +462,58 @@ class PresenceSystem {
             timestamp: this.sessionData.timestamp,
             deviceInfo: this.sessionData.deviceInfo
         };
-
-        // Save to localStorage
-        const existingEntries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
-        existingEntries.push(entry);
-        localStorage.setItem('btf5965_entries', JSON.stringify(existingEntries));
-
-        console.log('Entry saved:', entry);
+    
+        // Save to localStorage as backup
+        const localEntries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+        localEntries.push(entry);
+        localStorage.setItem('btf5965_entries', JSON.stringify(localEntries));
+    
+        // Save to GitHub Repository
+        try {
+            // Get current file content
+            const getUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
+            const getResponse = await fetch(getUrl, {
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+    
+            let sha = '';
+            let currentEntries = [];
+            
+            if (getResponse.ok) {
+                const fileData = await getResponse.json();
+                sha = fileData.sha;
+                currentEntries = JSON.parse(atob(fileData.content));
+            }
+    
+            // Add new entry
+            currentEntries.push(entry);
+    
+            // Update file in repository
+            const updateUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
+            const updateResponse = await fetch(updateUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    message: `Add attendance entry for ${entry.studentName}`,
+                    content: btoa(JSON.stringify(currentEntries, null, 2)),
+                    sha: sha || undefined,
+                    branch: GITHUB_CONFIG.branch
+                })
+            });
+    
+            if (updateResponse.ok) {
+                console.log('Entry saved to GitHub:', entry);
+            }
+        } catch (error) {
+            console.error('Failed to save to GitHub:', error);
+            alert('Entry saved locally. Online sync failed.');
+        }
     }
 
     generateEntryId() {
