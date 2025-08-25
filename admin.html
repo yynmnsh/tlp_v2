@@ -330,42 +330,100 @@
         class AdminDashboard {
             constructor() {
                 this.entries = [];
+                this.netlifyEntries = [];
                 this.stats = {};
                 this.init();
             }
-
-            init() {
-                this.loadData();
+        
+            async init() {
+                await this.loadData();
                 this.updateDisplay();
             }
-
+        
             async loadData() {
-                try {
-                    // Load from GitHub Repository
-                    const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
-                    const response = await fetch(url, {
-                        headers: {
-                            'Authorization': `token ${GITHUB_CONFIG.token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-            
-                    if (response.ok) {
-                        const fileData = await response.json();
-                        this.entries = JSON.parse(atob(fileData.content));
-                    } else {
-                        // Fallback to localStorage
-                        this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
-                    }
-                } catch (error) {
-                    console.error('Failed to load from GitHub:', error);
-                    // Fallback to localStorage
-                    this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
-                }
+                // Load from localStorage first
+                this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                
+                // Then try to load from Netlify
+                await this.loadNetlifyData();
                 
                 this.calculateStats();
             }
-
+        
+            async loadNetlifyData() {
+                try {
+                    console.log('Fetching Netlify submissions...');
+                    const response = await fetch('/.netlify/functions/get-submissions');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const submissions = await response.json();
+                    console.log(`Loaded ${submissions.length} submissions from Netlify`);
+                    
+                    // Convert Netlify format to our format
+                    this.netlifyEntries = submissions.map(sub => ({
+                        studentId: sub.data.studentId,
+                        studentName: sub.data.studentName,
+                        studentSchedule: sub.data.studentSchedule,
+                        feedback: sub.data.feedback,
+                        timestamp: sub.created_at,
+                        deviceInfo: typeof sub.data.deviceInfo === 'string' ? 
+                            JSON.parse(sub.data.deviceInfo) : sub.data.deviceInfo || {},
+                        source: 'Netlify'
+                    }));
+                    
+                    // Merge with local entries (avoiding duplicates)
+                    const allEntries = [...this.entries];
+                    
+                    this.netlifyEntries.forEach(netlifyEntry => {
+                        const exists = allEntries.some(localEntry => 
+                            localEntry.studentId === netlifyEntry.studentId && 
+                            localEntry.timestamp === netlifyEntry.timestamp
+                        );
+                        
+                        if (!exists) {
+                            allEntries.push(netlifyEntry);
+                        }
+                    });
+                    
+                    this.entries = allEntries;
+                    
+                    // Show status
+                    this.showNetlifyStatus(true, submissions.length);
+                    
+                } catch (error) {
+                    console.error('Failed to load Netlify data:', error);
+                    this.showNetlifyStatus(false, 0);
+                }
+            }
+        
+            showNetlifyStatus(success, count) {
+                // Add status indicator to the page
+                const headerEl = document.querySelector('.admin-header');
+                const existingStatus = document.getElementById('netlify-status');
+                
+                if (existingStatus) {
+                    existingStatus.remove();
+                }
+                
+                const statusEl = document.createElement('div');
+                statusEl.id = 'netlify-status';
+                statusEl.style.cssText = `
+                    background: ${success ? '#10b981' : '#f59e0b'};
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    text-align: center;
+                    font-size: 0.9rem;
+                `;
+                statusEl.textContent = success ? 
+                    `✓ Connected to Netlify Forms (${count} submissions)` : 
+                    '⚠ Using local data only (Netlify connection failed)';
+                
+                headerEl.appendChild(statusEl);
+            }
+        
             calculateStats() {
                 this.stats = {
                     totalEntries: this.entries.length,
