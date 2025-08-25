@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTF5965 - Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .admin-title {
+            font-family: 'Alfa Slab One', serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .admin-content {
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .actions-section {
+            margin: 2rem 0;
+        }
+
+        .section-title {
+            font-family: 'Alfa Slab One', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #0f172a;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+
+        .entries-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+        }
+
+        .entries-table th,
+        .entries-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .entries-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .entries-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .device-info {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .feedback-text {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .gif-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #059669;
+            color: white;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .no-gif {
+            background: #94a3b8;
+        }
+
+        .charts-section {
+            margin: 2rem 0;
+        }
+
+        .chart-container {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                margin: 1rem;
+            }
+            
+            .admin-content {
+                padding: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .entries-table {
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1 class="admin-title">BTF5965</h1>
+            <p class="admin-subtitle">Tax Law Tutorial - Admin Dashboard</p>
+        </div>
+
+        <div class="admin-content">
+            <!-- Statistics Section -->
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-entries">-</div>
+                    <div class="stat-label">Total Entries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="unique-students">-</div>
+                    <div class="stat-label">Unique Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="entries-with-feedback">-</div>
+                    <div class="stat-label">Entries with Feedback</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="most-common-schedule">-</div>
+                    <div class="stat-label">Most Common Schedule</div>
+                </div>
+            </div>
+
+            <!-- Actions Section -->
+            <div class="actions-section">
+                <h2 class="section-title">Data Management</h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="refreshData()">
+                        📊 Refresh Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        💾 Export Data
+                    </button>
+                    <button class="btn btn-danger" onclick="clearAllData()">
+                        🗑️ Clear All Data
+                    </button>
+                    <a href="index.html" class="btn btn-primary">
+                        🏠 Back to Main Site
+                    </a>
+                </div>
+            </div>
+
+            <!-- Device Analytics -->
+            <div class="charts-section">
+                <h2 class="section-title">Analytics</h2>
+                <div class="chart-container">
+                    <h3>Schedule Distribution</h3>
+                    <div id="schedule-chart"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>Device Types</h3>
+                    <div id="device-chart"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>Browsers</h3>
+                    <div id="browser-chart"></div>
+                </div>
+            </div>
+
+            <!-- Entries Table -->
+            <div class="entries-section">
+                <h2 class="section-title">Recent Entries</h2>
+                <div style="overflow-x: auto;">
+                    <table class="entries-table" id="entries-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Schedule</th>
+                                <th>Feedback</th>
+                                <th>Device</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entries-tbody">
+                            <tr>
+                                <td colspan="6" class="loading">Loading entries...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AdminDashboard {
+            constructor() {
+                this.entries = [];
+                this.stats = {};
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.updateDisplay();
+            }
+
+            loadData() {
+                this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                this.calculateStats();
+            }
+
+            calculateStats() {
+                this.stats = {
+                    totalEntries: this.entries.length,
+                    uniqueStudents: new Set(this.entries.map(e => e.studentId)).size,
+                    entriesWithFeedback: this.entries.filter(e => e.feedback && e.feedback.length > 0).length,
+                    schedules: this.entries.reduce((acc, e) => {
+                        const schedule = e.studentSchedule || 'Unknown';
+                        acc[schedule] = (acc[schedule] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    deviceTypes: this.entries.reduce((acc, e) => {
+                        const ua = e.deviceInfo?.userAgent || '';
+                        let device = 'Unknown';
+                        if (ua.includes('Mobile')) device = 'Mobile';
+                        else if (ua.includes('Tablet')) device = 'Tablet';
+                        else device = 'Desktop';
+                        acc[device] = (acc[device] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    browsers: this.entries.reduce((acc, e) => {
+                        const ua = e.deviceInfo?.userAgent || '';
+                        let browser = 'Unknown';
+                        if (ua.includes('Chrome')) browser = 'Chrome';
+                        else if (ua.includes('Firefox')) browser = 'Firefox';
+                        else if (ua.includes('Safari')) browser = 'Safari';
+                        else if (ua.includes('Edge')) browser = 'Edge';
+                        acc[browser] = (acc[browser] || 0) + 1;
+                        return acc;
+                    }, {})
+                };
+                
+                // Find most common schedule
+                const scheduleEntries = Object.entries(this.stats.schedules);
+                this.stats.mostCommonSchedule = scheduleEntries.length > 0 ? 
+                    scheduleEntries.reduce((a, b) => a[1] > b[1] ? a : b)[0] : 'None';
+            }
+
+            updateDisplay() {
+                // Update statistics
+                document.getElementById('total-entries').textContent = this.stats.totalEntries;
+                document.getElementById('unique-students').textContent = this.stats.uniqueStudents;
+                document.getElementById('entries-with-feedback').textContent = this.stats.entriesWithFeedback;
+                document.getElementById('most-common-schedule').textContent = this.stats.mostCommonSchedule;
+
+                // Update charts
+                this.updateScheduleChart();
+                this.updateDeviceChart();
+                this.updateBrowserChart();
+
+                // Update entries table
+                this.updateEntriesTable();
+            }
+
+            updateScheduleChart() {
+                const chartDiv = document.getElementById('schedule-chart');
+                const schedules = this.stats.schedules;
+                
+                if (Object.keys(schedules).length === 0) {
+                    chartDiv.innerHTML = '<p style="color: #64748b;">No data available</p>';
+                    return;
+                }
+
+                let chartHTML = '';
+                Object.entries(schedules)
+                    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+                    .forEach(([schedule, count]) => {
+                        const percentage = ((count / this.stats.totalEntries) * 100).toFixed(1);
+                        chartHTML += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0;">
+                                <span style="font-weight: 500;">${schedule}</span>
+                                <span style="font-weight: 600; color: #2563eb;">${count} (${percentage}%)</span>
+                            </div>
+                        `;
+                    });
+                
+                chartDiv.innerHTML = chartHTML;
+            }
+
+            updateDeviceChart() {
+                const chartDiv = document.getElementById('device-chart');
+                const deviceTypes = this.stats.deviceTypes;
+                
+                if (Object.keys(deviceTypes).length === 0) {
+                    chartDiv.innerHTML = '<p style="color: #64748b;">No data available</p>';
+                    return;
+                }
+
+                let chartHTML = '';
+                Object.entries(deviceTypes).forEach(([device, count]) => {
+                    const percentage = ((count / this.stats.totalEntries) * 100).toFixed(1);
+                    chartHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0;">
+                            <span>${device}</span>
+                            <span style="font-weight: 600;">${count} (${percentage}%)</span>
+                        </div>
+                    `;
+                });
+                
+                chartDiv.innerHTML = chartHTML;
+            }
+
+            updateBrowserChart() {
+                const chartDiv = document.getElementById('browser-chart');
+                const browsers = this.stats.browsers;
+                
+                if (Object.keys(browsers).length === 0) {
+                    chartDiv.innerHTML = '<p style="color: #64748b;">No data available</p>';
+                    return;
+                }
+
+                let chartHTML = '';
+                Object.entries(browsers).forEach(([browser, count]) => {
+                    const percentage = ((count / this.stats.totalEntries) * 100).toFixed(1);
+                    chartHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0;">
+                            <span>${browser}</span>
+                            <span style="font-weight: 600;">${count} (${percentage}%)</span>
+                        </div>
+                    `;
+                });
+                
+                chartDiv.innerHTML = chartHTML;
+            }
+
+            updateEntriesTable() {
+                const tbody = document.getElementById('entries-tbody');
+                
+                if (this.entries.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b;">No entries found</td></tr>';
+                    return;
+                }
+
+                const sortedEntries = [...this.entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                tbody.innerHTML = sortedEntries.map(entry => {
+                    const timestamp = new Date(entry.timestamp).toLocaleString();
+                    const deviceInfo = this.getDeviceInfo(entry.deviceInfo);
+                    const feedbackPreview = entry.feedback ? 
+                        (entry.feedback.length > 50 ? entry.feedback.substring(0, 50) + '...' : entry.feedback) : 
+                        'No feedback';
+                    const schedule = entry.studentSchedule || 'Unknown';
+                    
+                    return `
+                        <tr>
+                            <td>${timestamp}</td>
+                            <td>${entry.studentId}</td>
+                            <td>${entry.studentName}</td>
+                            <td>${schedule}</td>
+                            <td class="feedback-text" title="${entry.feedback || 'No feedback'}">${feedbackPreview}</td>
+                            <td class="device-info">${deviceInfo}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            getDeviceInfo(deviceInfo) {
+                if (!deviceInfo) return 'Unknown';
+                
+                const ua = deviceInfo.userAgent || '';
+                let device = 'Unknown';
+                let browser = 'Unknown';
+                
+                if (ua.includes('Mobile')) device = 'Mobile';
+                else if (ua.includes('Tablet')) device = 'Tablet';
+                else device = 'Desktop';
+                
+                if (ua.includes('Chrome')) browser = 'Chrome';
+                else if (ua.includes('Firefox')) browser = 'Firefox';
+                else if (ua.includes('Safari')) browser = 'Safari';
+                else if (ua.includes('Edge')) browser = 'Edge';
+                
+                return `${device} / ${browser}`;
+            }
+        }
+
+        // Global functions
+        function refreshData() {
+            window.adminDashboard.loadData();
+            window.adminDashboard.updateDisplay();
+            alert('Data refreshed successfully!');
+        }
+
+        function exportData() {
+            const entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+            const dataStr = JSON.stringify(entries, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `btf5965_entries_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all stored data? This action cannot be undone.')) {
+                localStorage.removeItem('btf5965_entries');
+                // Clear all GIF data
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('btf5965_gif_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                window.adminDashboard.loadData();
+                window.adminDashboard.updateDisplay();
+                alert('All data cleared successfully.');
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            window.adminDashboard = new AdminDashboard();
+        });
+    </script>
+</body>
+</html>
+

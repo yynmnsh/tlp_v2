@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTF5965 - Tax Law Tutorial Presence System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <h1 class="loading-text">BTF5965</h1>
+            <p class="loading-subtitle">Tax Law Tutorial</p>
+        </div>
+    </div>
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h1 class="course-title">BTF5965</h1>
+                <h2 class="course-subtitle">Tax Law Tutorial</h2>
+                <div class="course-badge">Presence System</div>
+            </div>
+            
+            <div class="welcome-content">
+                <div class="welcome-icon">📚</div>
+                <h3>Welcome to Today's Tutorial</h3>
+                <p>Please mark your attendance and share your learning feedback</p>
+                
+                <!-- Admin GIF Display Area -->
+                <div id="admin-gif-display" class="admin-gif-display hidden">
+                    <img id="admin-gif-img" alt="Admin GIF" class="admin-gif-image">
+                </div>
+                
+                <button id="start-btn" class="primary-btn">
+                    <span>Start Check-in</span>
+                    <div class="btn-arrow">→</div>
+                </button>
+                
+                <!-- Admin Controls (Hidden by default) -->
+                <div id="admin-controls" class="admin-controls hidden">
+                    <div class="admin-section">
+                        <h4>Admin: Upload Fun GIF</h4>
+                        <p>Upload a GIF to display to students during check-in</p>
+                        
+                        <div class="admin-upload-area" id="admin-gif-upload-area">
+                            <div class="upload-icon">🎭</div>
+                            <p>Click to upload or drag & drop a GIF</p>
+                            <input type="file" id="admin-gif-input" accept=".gif,image/gif" hidden>
+                        </div>
+                        
+                        <div id="admin-gif-preview" class="gif-preview hidden">
+                            <img id="admin-gif-preview-img" alt="Admin GIF Preview">
+                            <button id="remove-admin-gif-btn" class="remove-btn">×</button>
+                        </div>
+                        
+                        <div class="admin-buttons">
+                            <button id="toggle-admin-btn" class="secondary-btn">
+                                <span>Hide Admin Panel</span>
+                            </button>
+                            <button id="save-admin-gif-btn" class="primary-btn" disabled>
+                                <span>Save & Display GIF</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Admin Access Button -->
+                <button id="admin-access-btn" class="admin-access-btn">
+                    <span>Admin</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student ID Input Screen -->
+    <div id="student-id-screen" class="screen">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 25%"></div>
+            </div>
+            
+            <div class="form-container">
+                <h2>Enter Your Student ID</h2>
+                <p class="form-subtitle">Please enter your 8-digit student ID number</p>
+                
+                <div class="input-group">
+                    <input type="text" id="student-id-input" placeholder="12345678" maxlength="8" pattern="[0-9]{8}">
+                    <div class="input-underline"></div>
+                </div>
+                
+                <div id="student-id-error" class="error-message"></div>
+                
+                <button id="verify-id-btn" class="primary-btn" disabled>
+                    <span>Verify ID</span>
+                    <div class="btn-arrow">→</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Confirmation Screen -->
+    <div id="name-confirmation-screen" class="screen">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 50%"></div>
+            </div>
+            
+            <div class="confirmation-container">
+                <div class="confirmation-icon">👋</div>
+                <h2>Hello, <span id="student-name-display"></span>!</h2>
+                <p class="confirmation-subtitle">Is this your correct name?</p>
+                
+                <div class="student-info-card">
+                    <div class="info-row">
+                        <span class="info-label">Student ID:</span>
+                        <span id="confirmed-student-id" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Full Name:</span>
+                        <span id="confirmed-student-name" class="info-value"></span>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="name-correct-btn" class="primary-btn">
+                        <span>Yes, that's me</span>
+                        <div class="btn-arrow">→</div>
+                    </button>
+                    <button id="name-incorrect-btn" class="secondary-btn">
+                        <span>No, go back</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presence Confirmation Screen -->
+    <div id="presence-screen" class="screen">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 75%"></div>
+            </div>
+            
+            <div class="presence-container">
+                <div class="presence-icon">✅</div>
+                <h2>Mark Your Attendance</h2>
+                <p class="presence-subtitle">Confirm your presence in today's tutorial</p>
+                
+                <div class="attendance-card">
+                    <div class="attendance-info">
+                        <h3>BTF5965 - Tax Law Tutorial</h3>
+                        <p id="current-date"></p>
+                        <p id="current-time"></p>
+                    </div>
+                </div>
+                
+                <button id="mark-present-btn" class="primary-btn pulse">
+                    <span>I am present</span>
+                    <div class="btn-arrow">✓</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Screen -->
+    <div id="feedback-screen" class="screen">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 90%"></div>
+            </div>
+            
+            <div class="feedback-container">
+                <h2>Share Your Learning Feedback</h2>
+                <p class="feedback-subtitle">Help us improve your learning experience</p>
+                
+                <div class="question-card">
+                    <label for="feedback-input" class="question-text">
+                        "The thing that I need to understand more from this class/previous class is about..."
+                    </label>
+                    <textarea id="feedback-input" placeholder="Type your response here..." rows="4"></textarea>
+                </div>
+                
+
+                
+                <button id="submit-feedback-btn" class="primary-btn" disabled>
+                    <span>Submit Feedback</span>
+                    <div class="btn-arrow">→</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thank You Screen -->
+    <div id="thank-you-screen" class="screen">
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 100%"></div>
+            </div>
+            
+            <div class="thank-you-container">
+                <div class="success-icon">🎉</div>
+                <h2>Thank You!</h2>
+                <p class="thank-you-subtitle">Your attendance has been recorded successfully</p>
+                
+                <div class="summary-card">
+                    <h3>Session Summary</h3>
+                    <div class="summary-row">
+                        <span>Student:</span>
+                        <span id="final-student-name"></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Time:</span>
+                        <span id="final-timestamp"></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Status:</span>
+                        <span class="status-present">Present ✓</span>
+                    </div>
+                </div>
+                
+                <div class="slide-link-section">
+                    <h3>This Week's Materials</h3>
+                    <a id="slide-link" href="#" target="_blank" class="slide-link-btn">
+                        <div class="slide-icon">📄</div>
+                        <div class="slide-info">
+                            <span class="slide-title">Week 8 Slides</span>
+                            <span class="slide-subtitle">Tax Law Tutorial Materials</span>
+                        </div>
+                        <div class="slide-arrow">↗</div>
+                    </a>
+                </div>
+                
+                <button id="new-entry-btn" class="secondary-btn">
+                    <span>New Entry</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Notice</h3>
+                <button id="close-error-modal" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="error-modal-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="error-modal-ok" class="primary-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
