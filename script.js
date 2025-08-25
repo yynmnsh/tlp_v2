@@ -5,7 +5,7 @@
 const GITHUB_CONFIG = {
     owner: 'yynmnsh',
     repo: 'tlp_v2',
-    token: TOKEN_SECRET
+    token: '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'
     branch: 'main'
 };
 
