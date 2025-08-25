@@ -249,6 +249,16 @@
         </div>
     </div>
 
+    <!-- Hidden Netlify Form for data collection -->
+    <form name="attendance" netlify netlify-honeypot="bot-field" hidden>
+        <input type="text" name="studentId">
+        <input type="text" name="studentName">
+        <input type="text" name="studentSchedule">
+        <input type="text" name="timestamp">
+        <textarea name="feedback"></textarea>
+        <textarea name="deviceInfo"></textarea>
+    </form>
+    
     <!-- Error Modal -->
     <div id="error-modal" class="modal hidden">
         <div class="modal-content">
