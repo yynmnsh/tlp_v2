@@ -48,8 +48,8 @@ class PresenceSystem {
                 course_info: {
                     code: "BTF5965",
                     name: "Tax Law Tutorial",
-                    current_week: 8,
-                    slide_link: "https://example.com/btf5965/week8-slides.pdf"
+                    current_week: 5,
+                    slide_link: "http://bit.ly/4oR8clE"
                 }
             };
         }
