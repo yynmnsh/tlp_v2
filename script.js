@@ -1,14 +1,6 @@
 // BTF5965 Tax Law Tutorial Presence System
 // Main JavaScript functionality
 
-// GitHub Repository Configuration
-const GITHUB_CONFIG = {
-    owner: 'yynmnsh',
-    repo: 'tlp_v2',
-    token: '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',
-    branch: 'main'
-};
-
 class PresenceSystem {
     constructor() {
         this.currentScreen = 'loading-screen';
@@ -283,44 +275,6 @@ class PresenceSystem {
         if (this.tempAdminGif) {
             // Save locally first
             localStorage.setItem('btf5965_admin_gif', this.tempAdminGif.data);
-            
-            // Save to GitHub
-            try {
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/admin_gif.json`;
-                
-                // Get current file SHA if exists
-                let sha = '';
-                try {
-                    const getResponse = await fetch(url, {
-                        headers: {
-                            'Authorization': `token ${GITHUB_CONFIG.token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    if (getResponse.ok) {
-                        const fileData = await getResponse.json();
-                        sha = fileData.sha;
-                    }
-                } catch (e) {}
-    
-                // Update file
-                await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    body: JSON.stringify({
-                        message: 'Update admin GIF',
-                        content: btoa(JSON.stringify({
-                            gif: this.tempAdminGif.data,
-                            updated: new Date().toISOString()
-                        })),
-                        sha: sha || undefined,
-                        branch: GITHUB_CONFIG.branch
-                    })
-                });
-                
                 this.displayAdminGif(this.tempAdminGif.data);
                 this.toggleAdminPanel();
                 alert('GIF saved and will be displayed to all students!');
@@ -468,51 +422,27 @@ class PresenceSystem {
         localEntries.push(entry);
         localStorage.setItem('btf5965_entries', JSON.stringify(localEntries));
     
-        // Save to GitHub Repository
+        // Submit to Netlify Forms
         try {
-            // Get current file content
-            const getUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
-            const getResponse = await fetch(getUrl, {
-                headers: {
-                    'Authorization': `token ${GITHUB_CONFIG.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
+            const formData = new FormData();
+            formData.append('form-name', 'attendance');
+            formData.append('studentId', entry.studentId);
+            formData.append('studentName', entry.studentName);
+            formData.append('studentSchedule', entry.studentSchedule);
+            formData.append('feedback', entry.feedback);
+            formData.append('timestamp', entry.timestamp);
+            formData.append('deviceInfo', JSON.stringify(entry.deviceInfo));
+    
+            await fetch('/', {
+                method: 'POST',
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(formData).toString()
             });
     
-            let sha = '';
-            let currentEntries = [];
-            
-            if (getResponse.ok) {
-                const fileData = await getResponse.json();
-                sha = fileData.sha;
-                currentEntries = JSON.parse(atob(fileData.content));
-            }
-    
-            // Add new entry
-            currentEntries.push(entry);
-    
-            // Update file in repository
-            const updateUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/entries.json`;
-            const updateResponse = await fetch(updateUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${GITHUB_CONFIG.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify({
-                    message: `Add attendance entry for ${entry.studentName}`,
-                    content: btoa(JSON.stringify(currentEntries, null, 2)),
-                    sha: sha || undefined,
-                    branch: GITHUB_CONFIG.branch
-                })
-            });
-    
-            if (updateResponse.ok) {
-                console.log('Entry saved to GitHub:', entry);
-            }
+            console.log('Entry saved to Netlify:', entry);
         } catch (error) {
-            console.error('Failed to save to GitHub:', error);
-            alert('Entry saved locally. Online sync failed.');
+            console.error('Failed to save to Netlify:', error);
+            alert('Entry saved locally. Online sync may have failed.');
         }
     }
 
