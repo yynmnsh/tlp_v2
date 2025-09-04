@@ -953,6 +953,61 @@
             }
         }
 
+        // Feedback Modal Functions
+        function showFeedbackModal(index) {
+            const entry = window.displayedEntries[index];
+            if (!entry) return;
+            
+            // Populate modal with entry data
+            document.getElementById('modal-student-id').textContent = entry.studentId || 'Unknown';
+            document.getElementById('modal-student-name').textContent = entry.studentName || 'Unknown';
+            document.getElementById('modal-schedule').textContent = entry.studentSchedule || 'Unknown';
+            
+            let timestamp;
+            try {
+                timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown';
+            } catch {
+                timestamp = entry.timestamp || 'Unknown';
+            }
+            document.getElementById('modal-timestamp').textContent = timestamp;
+            
+            // Set source with badge
+            let sourceHtml = entry.source || 'Local';
+            if (entry.source === 'CSV') {
+                sourceHtml = '<span class="data-source-badge data-source-csv">CSV</span>';
+            } else if (entry.source === 'Netlify') {
+                sourceHtml = '<span class="data-source-badge data-source-netlify">Netlify</span>';
+            } else {
+                sourceHtml = '<span class="data-source-badge data-source-local">Local</span>';
+            }
+            document.getElementById('modal-source').innerHTML = sourceHtml;
+            
+            // Set feedback content
+            document.getElementById('modal-feedback-content').textContent = entry.feedback || 'No feedback provided';
+            
+            // Show modal
+            document.getElementById('feedback-modal').classList.add('active');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedback-modal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('feedback-modal');
+            if (event.target === modal) {
+                closeFeedbackModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeFeedbackModal();
+            }
+        });
+
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
             window.adminDashboard = new AdminDashboard();
