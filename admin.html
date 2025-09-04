@@ -953,10 +953,15 @@
             }
         }
 
-        // Feedback Modal Functions
-        function showFeedbackModal(index) {
+        // Feedback Modal Functions - Define globally
+        window.showFeedbackModal = function(index) {
             const entry = window.displayedEntries[index];
-            if (!entry) return;
+            if (!entry) {
+                console.error('Entry not found at index:', index);
+                return;
+            }
+            
+            console.log('Showing feedback modal for entry:', entry);
             
             // Populate modal with entry data
             document.getElementById('modal-student-id').textContent = entry.studentId || 'Unknown';
@@ -986,25 +991,33 @@
             document.getElementById('modal-feedback-content').textContent = entry.feedback || 'No feedback provided';
             
             // Show modal
-            document.getElementById('feedback-modal').classList.add('active');
-        }
+            const modal = document.getElementById('feedback-modal');
+            if (modal) {
+                modal.classList.add('active');
+            } else {
+                console.error('Feedback modal element not found');
+            }
+        };
 
-        function closeFeedbackModal() {
-            document.getElementById('feedback-modal').classList.remove('active');
-        }
+        window.closeFeedbackModal = function() {
+            const modal = document.getElementById('feedback-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        };
 
         // Close modal when clicking outside
         document.addEventListener('click', function(event) {
             const modal = document.getElementById('feedback-modal');
-            if (event.target === modal) {
-                closeFeedbackModal();
+            if (modal && event.target === modal) {
+                window.closeFeedbackModal();
             }
         });
 
         // Close modal with Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                closeFeedbackModal();
+                window.closeFeedbackModal();
             }
         });
 
