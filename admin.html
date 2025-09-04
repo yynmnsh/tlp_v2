@@ -913,10 +913,10 @@
         }
 
         // Global functions
-        function refreshData() {
-            window.adminDashboard.loadData();
+        async function refreshData() {
+            await window.adminDashboard.loadData();
             window.adminDashboard.updateDisplay();
-            alert('Data refreshed successfully!');
+            console.log('Data refreshed. Total entries:', window.adminDashboard.entries.length);
         }
 
         function exportData() {
