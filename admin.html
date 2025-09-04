@@ -156,7 +156,7 @@
             margin-top: 1rem;
             background: white;
             border-radius: 0.5rem;
-            overflow: hidden;
+            overflow: visible !important; /* Fixed: Allow content to show */
             box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
         }
 
@@ -182,11 +182,123 @@
             color: #64748b;
         }
 
+        /* Fixed: Show full feedback text */
         .feedback-text {
-            max-width: 300px;
+            max-width: 400px !important;
+            min-width: 200px !important;
             overflow: visible !important;
             text-overflow: unset !important;
             white-space: normal !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            line-height: 1.4 !important;
+        }
+
+        .feedback-clickable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .feedback-clickable:hover {
+            background-color: #f0f4f8;
+        }
+
+        .expand-btn {
+            display: block;
+            color: #2563eb;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .expand-btn:hover {
+            text-decoration: underline;
+        }
+
+        /* Feedback Modal Styles */
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .feedback-modal.active {
+            display: flex;
+        }
+
+        .feedback-modal-content {
+            background: white;
+            border-radius: 0.75rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feedback-modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feedback-modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .feedback-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback-modal-close:hover {
+            background: #f8fafc;
+            border-radius: 50%;
+        }
+
+        .feedback-info {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .feedback-info-row {
+            display: flex;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .feedback-info-label {
+            font-weight: 600;
+            color: #64748b;
+            min-width: 100px;
+        }
+
+        .feedback-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
         }
 
         .gif-indicator {
@@ -435,6 +547,42 @@
         </div>
     </div>
 
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="feedback-modal">
+        <div class="feedback-modal-content">
+            <div class="feedback-modal-header">
+                <h3>Feedback Details</h3>
+                <button class="feedback-modal-close" onclick="closeFeedbackModal()">×</button>
+            </div>
+            <div class="feedback-modal-body">
+                <div class="feedback-info">
+                    <div class="feedback-info-row">
+                        <span class="feedback-info-label">Student ID:</span>
+                        <span id="modal-student-id"></span>
+                    </div>
+                    <div class="feedback-info-row">
+                        <span class="feedback-info-label">Name:</span>
+                        <span id="modal-student-name"></span>
+                    </div>
+                    <div class="feedback-info-row">
+                        <span class="feedback-info-label">Schedule:</span>
+                        <span id="modal-schedule"></span>
+                    </div>
+                    <div class="feedback-info-row">
+                        <span class="feedback-info-label">Timestamp:</span>
+                        <span id="modal-timestamp"></span>
+                    </div>
+                    <div class="feedback-info-row">
+                        <span class="feedback-info-label">Source:</span>
+                        <span id="modal-source"></span>
+                    </div>
+                </div>
+                <h4 style="margin-bottom: 1rem; color: #0f172a;">Feedback Content:</h4>
+                <div id="modal-feedback-content" class="feedback-content"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // GitHub Repository Configuration
         const GITHUB_CONFIG = {
@@ -470,53 +618,55 @@
         
             async loadData() {
                 // Load from localStorage first
-                this.entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                const localEntries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
+                
+                // Load CSV entries from localStorage
+                const storedCsvEntries = JSON.parse(localStorage.getItem('btf5965_csv_entries') || '[]');
+                this.csvEntries = storedCsvEntries;
                 
                 // Then try to load from Netlify
                 await this.loadNetlifyData();
                 
-                // Add any CSV entries that were previously imported
-                const storedCsvEntries = JSON.parse(localStorage.getItem('btf5965_csv_entries') || '[]');
-                this.csvEntries = storedCsvEntries;
+                // Merge all entries - start fresh
+                this.entries = [];
                 
-                // Merge all entries
-                this.mergeAllEntries();
-                
-                this.calculateStats();
-            }
-
-            mergeAllEntries() {
-                // Start with local entries
-                const allEntries = [...this.entries];
-                
-                // Add Netlify entries (avoiding duplicates)
-                this.netlifyEntries.forEach(netlifyEntry => {
-                    const exists = allEntries.some(localEntry => 
-                        localEntry.studentId === netlifyEntry.studentId && 
-                        localEntry.timestamp === netlifyEntry.timestamp
-                    );
-                    
-                    if (!exists) {
-                        allEntries.push(netlifyEntry);
-                    }
+                // Add local entries
+                localEntries.forEach(entry => {
+                    if (!entry.source) entry.source = 'Local';
+                    this.entries.push(entry);
                 });
                 
-                // Add CSV entries (avoiding duplicates)
+                // Add CSV entries
                 this.csvEntries.forEach(csvEntry => {
-                    const exists = allEntries.some(entry => 
+                    const exists = this.entries.some(entry => 
                         entry.studentId === csvEntry.studentId && 
                         entry.timestamp === csvEntry.timestamp
                     );
                     
                     if (!exists) {
-                        allEntries.push(csvEntry);
+                        this.entries.push(csvEntry);
                     }
                 });
                 
-                this.entries = allEntries;
+                // Add Netlify entries
+                this.netlifyEntries.forEach(netlifyEntry => {
+                    const exists = this.entries.some(entry => 
+                        entry.studentId === netlifyEntry.studentId && 
+                        entry.timestamp === netlifyEntry.timestamp
+                    );
+                    
+                    if (!exists) {
+                        this.entries.push(netlifyEntry);
+                    }
+                });
+                
+                console.log('Total entries after merge:', this.entries.length);
+                console.log('Entries sample:', this.entries.slice(0, 5));
+                
+                this.calculateStats();
             }
 
-            addCsvEntries(newCsvEntries) {
+            async addCsvEntries(newCsvEntries) {
                 // Add to csvEntries array
                 this.csvEntries = [...this.csvEntries, ...newCsvEntries];
                 
@@ -524,7 +674,8 @@
                 localStorage.setItem('btf5965_csv_entries', JSON.stringify(this.csvEntries));
                 
                 // Reload and refresh display
-                this.loadData();
+                await this.loadData();
+                this.updateDisplay();
             }
         
             async loadNetlifyData() {
@@ -722,19 +873,38 @@
             updateEntriesTable() {
                 const tbody = document.getElementById('entries-tbody');
                 
-                if (this.entries.length === 0) {
+                console.log('Updating entries table with', this.entries.length, 'entries');
+                
+                if (!this.entries || this.entries.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b;">No entries found</td></tr>';
                     return;
                 }
 
-                const sortedEntries = [...this.entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                // Sort entries by timestamp (newest first)
+                const sortedEntries = [...this.entries].sort((a, b) => {
+                    const dateA = new Date(a.timestamp || 0);
+                    const dateB = new Date(b.timestamp || 0);
+                    return dateB - dateA;
+                });
                 
-                tbody.innerHTML = sortedEntries.map(entry => {
-                    const timestamp = new Date(entry.timestamp).toLocaleString();
-                    const feedbackPreview = entry.feedback ? 
-                        (entry.feedback.length > 50 ? entry.feedback.substring(0, 50) + '...' : entry.feedback) : 
-                        'No feedback';
+                // Limit to most recent 100 entries for performance
+                const entriesToDisplay = sortedEntries.slice(0, 100);
+                
+                // Store the displayed entries for modal access
+                window.displayedEntries = entriesToDisplay;
+                
+                tbody.innerHTML = entriesToDisplay.map((entry, index) => {
+                    let timestamp;
+                    try {
+                        timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'Unknown';
+                    } catch {
+                        timestamp = entry.timestamp || 'Unknown';
+                    }
+                    
+                    const feedback = entry.feedback || 'No feedback';
                     const schedule = entry.studentSchedule || 'Unknown';
+                    const studentName = entry.studentName || 'Unknown';
+                    const studentId = entry.studentId || 'Unknown';
                     
                     // Determine source badge
                     let sourceBadge = '';
@@ -746,17 +916,41 @@
                         sourceBadge = '<span class="data-source-badge data-source-local">Local</span>';
                     }
                     
+                    // Create feedback cell - show full text with click option for long feedback
+                    let feedbackCell;
+                    if (feedback !== 'No feedback' && feedback.length > 150) {
+                        feedbackCell = `
+                            <td class="feedback-text feedback-clickable" onclick="window.showFeedbackModal(${index})" title="Click to view in modal">
+                                <div>${feedback}</div>
+                                <span class="expand-btn">⤢ Click for details</span>
+                            </td>
+                        `;
+                    } else {
+                        feedbackCell = `<td class="feedback-text">${feedback}</td>`;
+                    }
+                    
                     return `
                         <tr>
                             <td>${timestamp}</td>
-                            <td>${entry.studentId}</td>
-                            <td>${entry.studentName}</td>
+                            <td>${studentId}</td>
+                            <td>${studentName}</td>
                             <td>${schedule}</td>
-                            <td class="feedback-text" title="${entry.feedback || 'No feedback'}">${feedbackPreview}</td>
+                            ${feedbackCell}
                             <td>${sourceBadge}</td>
                         </tr>
                     `;
                 }).join('');
+                
+                // Add a note if there are more entries
+                if (sortedEntries.length > 100) {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #64748b; font-style: italic;">
+                                Showing most recent 100 of ${sortedEntries.length} total entries
+                            </td>
+                        </tr>
+                    `;
+                }
             }
         }
 
@@ -848,15 +1042,27 @@
                     
                     // Process each row
                     const processedData = result.data.map(row => {
+                        // Parse timestamp - handle various formats
+                        let timestamp;
+                        const timestampField = row['Timestamp'] || row['timestamp'] || row['Date'] || row['date'];
+                        
+                        if (timestampField) {
+                            // Try to parse the timestamp
+                            const parsed = new Date(timestampField);
+                            timestamp = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+                        } else {
+                            timestamp = new Date().toISOString();
+                        }
+                        
                         // Map CSV columns to our data structure
-                        // Adjust these mappings based on your CSV structure
+                        // Handle various column name formats
                         return {
                             id: generateEntryId(),
-                            studentId: String(row['Student ID'] || row['studentId'] || ''),
-                            studentName: row['Name'] || row['studentName'] || '',
-                            studentSchedule: row['Schedule'] || row['studentSchedule'] || '',
-                            feedback: row['Feedback'] || row['feedback'] || '',
-                            timestamp: row['Timestamp'] || row['timestamp'] || new Date().toISOString(),
+                            studentId: String(row['Student ID'] || row['StudentID'] || row['student_id'] || row['studentId'] || row['ID'] || '').trim(),
+                            studentName: (row['Name'] || row['Student Name'] || row['studentName'] || row['Full Name'] || '').trim(),
+                            studentSchedule: (row['Schedule'] || row['studentSchedule'] || row['Class'] || row['Session'] || '').trim(),
+                            feedback: (row['Feedback'] || row['feedback'] || row['Comments'] || row['Response'] || '').trim(),
+                            timestamp: timestamp,
                             source: 'CSV',
                             fileName: file.name,
                             deviceInfo: {
@@ -865,7 +1071,7 @@
                                 sessionId: generateSessionId()
                             }
                         };
-                    }).filter(entry => entry.studentId); // Filter out entries without student ID
+                    }).filter(entry => entry.studentId && entry.studentId !== '0'); // Filter out entries without valid student ID
                     
                     csvData.push(...processedData);
                     totalProcessed += processedData.length;
@@ -877,7 +1083,7 @@
             
             if (csvData.length > 0) {
                 // Add CSV entries to dashboard
-                window.adminDashboard.addCsvEntries(csvData);
+                await window.adminDashboard.addCsvEntries(csvData);
                 
                 let message = `Successfully imported ${totalProcessed} entries from ${selectedCsvFiles.length} file(s)`;
                 if (errors.length > 0) {
@@ -888,8 +1094,6 @@
                 // Close import section
                 closeCsvImport();
                 
-                // Refresh display
-                refreshData();
             } else {
                 alert('No valid entries found in the CSV files.\n\nErrors:\n' + errors.join('\n'));
             }
