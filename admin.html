@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -139,6 +140,16 @@
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+            transform: translateY(-2px);
+        }
+
         .entries-table {
             width: 100%;
             border-collapse: collapse;
@@ -209,6 +220,86 @@
             color: #64748b;
         }
 
+        /* CSV Import Section Styles */
+        .csv-import-section {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 2rem 0;
+            border: 2px dashed #e2e8f0;
+        }
+
+        .csv-import-section.active {
+            border-color: #2563eb;
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .file-input-hidden {
+            display: none;
+        }
+
+        .csv-files-list {
+            margin: 1rem 0;
+        }
+
+        .csv-file-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .csv-file-name {
+            font-weight: 500;
+            color: #0f172a;
+        }
+
+        .csv-file-info {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .remove-csv-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .remove-csv-btn:hover {
+            background: #b91c1c;
+        }
+
+        .data-source-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: #3b82f6;
+            color: white;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .data-source-local {
+            background: #64748b;
+        }
+
+        .data-source-csv {
+            background: #059669;
+        }
+
+        .data-source-netlify {
+            background: #3b82f6;
+        }
+
         @media (max-width: 768px) {
             .admin-container {
                 margin: 1rem;
@@ -263,6 +354,9 @@
                     <button class="btn btn-primary" onclick="refreshData()">
                         📊 Refresh Data
                     </button>
+                    <button class="btn btn-success" onclick="openCsvImport()">
+                        📁 Import Data
+                    </button>
                     <button class="btn btn-secondary" onclick="exportData()">
                         💾 Export Data
                     </button>
@@ -272,6 +366,29 @@
                     <a href="index.html" class="btn btn-primary">
                         🏠 Back to Main Site
                     </a>
+                </div>
+            </div>
+
+            <!-- CSV Import Section (Hidden by default) -->
+            <div id="csv-import-section" class="csv-import-section" style="display: none;">
+                <h3 style="margin-bottom: 1rem;">Import CSV Files</h3>
+                <p style="color: #64748b; margin-bottom: 1rem;">Upload one or more CSV files containing attendance data</p>
+                
+                <input type="file" id="csv-file-input" class="file-input-hidden" accept=".csv" multiple>
+                
+                <button class="btn btn-primary" onclick="document.getElementById('csv-file-input').click()">
+                    Choose CSV Files
+                </button>
+                
+                <div id="csv-files-list" class="csv-files-list"></div>
+                
+                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-success" onclick="processCsvFiles()" id="process-csv-btn" disabled>
+                        Process & Import
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeCsvImport()">
+                        Cancel
+                    </button>
                 </div>
             </div>
 
@@ -304,7 +421,7 @@
                                 <th>Name</th>
                                 <th>Schedule</th>
                                 <th>Feedback</th>
-                                <th>Device</th>
+                                <th>Source</th>
                             </tr>
                         </thead>
                         <tbody id="entries-tbody">
@@ -326,11 +443,16 @@
             token: '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',
             branch: 'main'
         };
+
+        // Global variables for CSV handling
+        let selectedCsvFiles = [];
+        let csvData = [];
         
         class AdminDashboard {
             constructor() {
                 this.entries = [];
                 this.netlifyEntries = [];
+                this.csvEntries = [];
                 this.stats = {};
                 this.init();
             }
@@ -338,6 +460,12 @@
             async init() {
                 await this.loadData();
                 this.updateDisplay();
+                this.setupCsvHandlers();
+            }
+
+            setupCsvHandlers() {
+                const csvFileInput = document.getElementById('csv-file-input');
+                csvFileInput.addEventListener('change', handleCsvFileSelect);
             }
         
             async loadData() {
@@ -347,7 +475,56 @@
                 // Then try to load from Netlify
                 await this.loadNetlifyData();
                 
+                // Add any CSV entries that were previously imported
+                const storedCsvEntries = JSON.parse(localStorage.getItem('btf5965_csv_entries') || '[]');
+                this.csvEntries = storedCsvEntries;
+                
+                // Merge all entries
+                this.mergeAllEntries();
+                
                 this.calculateStats();
+            }
+
+            mergeAllEntries() {
+                // Start with local entries
+                const allEntries = [...this.entries];
+                
+                // Add Netlify entries (avoiding duplicates)
+                this.netlifyEntries.forEach(netlifyEntry => {
+                    const exists = allEntries.some(localEntry => 
+                        localEntry.studentId === netlifyEntry.studentId && 
+                        localEntry.timestamp === netlifyEntry.timestamp
+                    );
+                    
+                    if (!exists) {
+                        allEntries.push(netlifyEntry);
+                    }
+                });
+                
+                // Add CSV entries (avoiding duplicates)
+                this.csvEntries.forEach(csvEntry => {
+                    const exists = allEntries.some(entry => 
+                        entry.studentId === csvEntry.studentId && 
+                        entry.timestamp === csvEntry.timestamp
+                    );
+                    
+                    if (!exists) {
+                        allEntries.push(csvEntry);
+                    }
+                });
+                
+                this.entries = allEntries;
+            }
+
+            addCsvEntries(newCsvEntries) {
+                // Add to csvEntries array
+                this.csvEntries = [...this.csvEntries, ...newCsvEntries];
+                
+                // Save to localStorage
+                localStorage.setItem('btf5965_csv_entries', JSON.stringify(this.csvEntries));
+                
+                // Reload and refresh display
+                this.loadData();
             }
         
             async loadNetlifyData() {
@@ -373,22 +550,6 @@
                             JSON.parse(sub.data.deviceInfo) : sub.data.deviceInfo || {},
                         source: 'Netlify'
                     }));
-                    
-                    // Merge with local entries (avoiding duplicates)
-                    const allEntries = [...this.entries];
-                    
-                    this.netlifyEntries.forEach(netlifyEntry => {
-                        const exists = allEntries.some(localEntry => 
-                            localEntry.studentId === netlifyEntry.studentId && 
-                            localEntry.timestamp === netlifyEntry.timestamp
-                        );
-                        
-                        if (!exists) {
-                            allEntries.push(netlifyEntry);
-                        }
-                    });
-                    
-                    this.entries = allEntries;
                     
                     // Show status
                     this.showNetlifyStatus(true, submissions.length);
@@ -418,7 +579,7 @@
                     font-size: 0.9rem;
                 `;
                 statusEl.textContent = success ? 
-                    `✓ Connected to Netlify Forms (${count} submissions)` : 
+                    `✔ Connected to Netlify Forms (${count} submissions)` : 
                     '⚠ Using local data only (Netlify connection failed)';
                 
                 headerEl.appendChild(statusEl);
@@ -437,20 +598,30 @@
                     deviceTypes: this.entries.reduce((acc, e) => {
                         const ua = e.deviceInfo?.userAgent || '';
                         let device = 'Unknown';
-                        if (ua.includes('Mobile')) device = 'Mobile';
-                        else if (ua.includes('Tablet')) device = 'Tablet';
-                        else device = 'Desktop';
+                        if (e.source === 'CSV') {
+                            device = 'CSV Import';
+                        } else if (ua.includes('Mobile')) {
+                            device = 'Mobile';
+                        } else if (ua.includes('Tablet')) {
+                            device = 'Tablet';
+                        } else {
+                            device = 'Desktop';
+                        }
                         acc[device] = (acc[device] || 0) + 1;
                         return acc;
                     }, {}),
                     browsers: this.entries.reduce((acc, e) => {
-                        const ua = e.deviceInfo?.userAgent || '';
-                        let browser = 'Unknown';
-                        if (ua.includes('Chrome')) browser = 'Chrome';
-                        else if (ua.includes('Firefox')) browser = 'Firefox';
-                        else if (ua.includes('Safari')) browser = 'Safari';
-                        else if (ua.includes('Edge')) browser = 'Edge';
-                        acc[browser] = (acc[browser] || 0) + 1;
+                        if (e.source === 'CSV') {
+                            acc['CSV Import'] = (acc['CSV Import'] || 0) + 1;
+                        } else {
+                            const ua = e.deviceInfo?.userAgent || '';
+                            let browser = 'Unknown';
+                            if (ua.includes('Chrome')) browser = 'Chrome';
+                            else if (ua.includes('Firefox')) browser = 'Firefox';
+                            else if (ua.includes('Safari')) browser = 'Safari';
+                            else if (ua.includes('Edge')) browser = 'Edge';
+                            acc[browser] = (acc[browser] || 0) + 1;
+                        }
                         return acc;
                     }, {})
                 };
@@ -560,11 +731,20 @@
                 
                 tbody.innerHTML = sortedEntries.map(entry => {
                     const timestamp = new Date(entry.timestamp).toLocaleString();
-                    const deviceInfo = this.getDeviceInfo(entry.deviceInfo);
                     const feedbackPreview = entry.feedback ? 
                         (entry.feedback.length > 50 ? entry.feedback.substring(0, 50) + '...' : entry.feedback) : 
                         'No feedback';
                     const schedule = entry.studentSchedule || 'Unknown';
+                    
+                    // Determine source badge
+                    let sourceBadge = '';
+                    if (entry.source === 'CSV') {
+                        sourceBadge = '<span class="data-source-badge data-source-csv">CSV</span>';
+                    } else if (entry.source === 'Netlify') {
+                        sourceBadge = '<span class="data-source-badge data-source-netlify">Netlify</span>';
+                    } else {
+                        sourceBadge = '<span class="data-source-badge data-source-local">Local</span>';
+                    }
                     
                     return `
                         <tr>
@@ -573,30 +753,163 @@
                             <td>${entry.studentName}</td>
                             <td>${schedule}</td>
                             <td class="feedback-text" title="${entry.feedback || 'No feedback'}">${feedbackPreview}</td>
-                            <td class="device-info">${deviceInfo}</td>
+                            <td>${sourceBadge}</td>
                         </tr>
                     `;
                 }).join('');
             }
+        }
 
-            getDeviceInfo(deviceInfo) {
-                if (!deviceInfo) return 'Unknown';
-                
-                const ua = deviceInfo.userAgent || '';
-                let device = 'Unknown';
-                let browser = 'Unknown';
-                
-                if (ua.includes('Mobile')) device = 'Mobile';
-                else if (ua.includes('Tablet')) device = 'Tablet';
-                else device = 'Desktop';
-                
-                if (ua.includes('Chrome')) browser = 'Chrome';
-                else if (ua.includes('Firefox')) browser = 'Firefox';
-                else if (ua.includes('Safari')) browser = 'Safari';
-                else if (ua.includes('Edge')) browser = 'Edge';
-                
-                return `${device} / ${browser}`;
+        // CSV Import Functions
+        function openCsvImport() {
+            const section = document.getElementById('csv-import-section');
+            section.style.display = 'block';
+            section.classList.add('active');
+        }
+
+        function closeCsvImport() {
+            const section = document.getElementById('csv-import-section');
+            section.style.display = 'none';
+            section.classList.remove('active');
+            
+            // Reset
+            selectedCsvFiles = [];
+            csvData = [];
+            document.getElementById('csv-file-input').value = '';
+            document.getElementById('csv-files-list').innerHTML = '';
+            document.getElementById('process-csv-btn').disabled = true;
+        }
+
+        function handleCsvFileSelect(event) {
+            const files = Array.from(event.target.files);
+            selectedCsvFiles = files;
+            displaySelectedFiles();
+            
+            // Enable process button if files are selected
+            document.getElementById('process-csv-btn').disabled = files.length === 0;
+        }
+
+        function displaySelectedFiles() {
+            const listDiv = document.getElementById('csv-files-list');
+            
+            if (selectedCsvFiles.length === 0) {
+                listDiv.innerHTML = '';
+                return;
             }
+            
+            listDiv.innerHTML = selectedCsvFiles.map((file, index) => `
+                <div class="csv-file-item">
+                    <div>
+                        <div class="csv-file-name">${file.name}</div>
+                        <div class="csv-file-info">Size: ${(file.size / 1024).toFixed(2)} KB</div>
+                    </div>
+                    <button class="remove-csv-btn" onclick="removeCsvFile(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeCsvFile(index) {
+            selectedCsvFiles.splice(index, 1);
+            
+            // Update file input
+            const dataTransfer = new DataTransfer();
+            selectedCsvFiles.forEach(file => dataTransfer.items.add(file));
+            document.getElementById('csv-file-input').files = dataTransfer.files;
+            
+            displaySelectedFiles();
+            document.getElementById('process-csv-btn').disabled = selectedCsvFiles.length === 0;
+        }
+
+        async function processCsvFiles() {
+            if (selectedCsvFiles.length === 0) {
+                alert('Please select CSV files to import');
+                return;
+            }
+            
+            csvData = [];
+            let totalProcessed = 0;
+            let errors = [];
+            
+            for (const file of selectedCsvFiles) {
+                try {
+                    const text = await readFileAsText(file);
+                    
+                    // Parse CSV using Papa Parse
+                    const result = Papa.parse(text, {
+                        header: true,
+                        dynamicTyping: true,
+                        skipEmptyLines: true,
+                        transformHeader: header => header.trim()
+                    });
+                    
+                    if (result.errors.length > 0) {
+                        errors.push(`${file.name}: ${result.errors.map(e => e.message).join(', ')}`);
+                    }
+                    
+                    // Process each row
+                    const processedData = result.data.map(row => {
+                        // Map CSV columns to our data structure
+                        // Adjust these mappings based on your CSV structure
+                        return {
+                            id: generateEntryId(),
+                            studentId: String(row['Student ID'] || row['studentId'] || ''),
+                            studentName: row['Name'] || row['studentName'] || '',
+                            studentSchedule: row['Schedule'] || row['studentSchedule'] || '',
+                            feedback: row['Feedback'] || row['feedback'] || '',
+                            timestamp: row['Timestamp'] || row['timestamp'] || new Date().toISOString(),
+                            source: 'CSV',
+                            fileName: file.name,
+                            deviceInfo: {
+                                userAgent: 'CSV Import',
+                                platform: 'CSV',
+                                sessionId: generateSessionId()
+                            }
+                        };
+                    }).filter(entry => entry.studentId); // Filter out entries without student ID
+                    
+                    csvData.push(...processedData);
+                    totalProcessed += processedData.length;
+                    
+                } catch (error) {
+                    errors.push(`${file.name}: ${error.message}`);
+                }
+            }
+            
+            if (csvData.length > 0) {
+                // Add CSV entries to dashboard
+                window.adminDashboard.addCsvEntries(csvData);
+                
+                let message = `Successfully imported ${totalProcessed} entries from ${selectedCsvFiles.length} file(s)`;
+                if (errors.length > 0) {
+                    message += '\n\nErrors:\n' + errors.join('\n');
+                }
+                alert(message);
+                
+                // Close import section
+                closeCsvImport();
+                
+                // Refresh display
+                refreshData();
+            } else {
+                alert('No valid entries found in the CSV files.\n\nErrors:\n' + errors.join('\n'));
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function generateEntryId() {
+            return 'csv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function generateSessionId() {
+            return 'csv_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
         // Global functions
@@ -607,22 +920,29 @@
         }
 
         function exportData() {
-            const entries = JSON.parse(localStorage.getItem('btf5965_entries') || '[]');
-            const dataStr = JSON.stringify(entries, null, 2);
+            const allData = {
+                localEntries: JSON.parse(localStorage.getItem('btf5965_entries') || '[]'),
+                csvEntries: JSON.parse(localStorage.getItem('btf5965_csv_entries') || '[]'),
+                exportDate: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(allData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = `btf5965_entries_${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `btf5965_all_entries_${new Date().toISOString().split('T')[0]}.json`;
             link.click();
         }
 
         function clearAllData() {
             if (confirm('Are you sure you want to clear all stored data? This action cannot be undone.')) {
                 localStorage.removeItem('btf5965_entries');
+                localStorage.removeItem('btf5965_csv_entries');
+                
                 // Clear all GIF data
                 Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('btf5965_gif_')) {
+                    if (key.startsWith('btf5965_')) {
                         localStorage.removeItem(key);
                     }
                 });
@@ -640,4 +960,3 @@
     </script>
 </body>
 </html>
-
