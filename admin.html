@@ -887,8 +887,8 @@
                     return dateB - dateA;
                 });
                 
-                // Limit to most recent 100 entries for performance
-                const entriesToDisplay = sortedEntries.slice(0, 100);
+                // Limit to most recent 500 entries for performance
+                const entriesToDisplay = sortedEntries.slice(0, 500);
                 
                 // Store the displayed entries for modal access
                 window.displayedEntries = entriesToDisplay;
